@@ -959,13 +959,11 @@ _convert_transparent(ImagingObject *self, PyObject *args) {
     return NULL;
 }
 
-static PyObject *
-_copy(ImagingObject *self, PyObject *args) {
-    if (!PyArg_ParseTuple(args, "")) {
-        return NULL;
-    }
-
-    return PyImagingNew(ImagingCopy(self->image));
+HPyDef_METH(Imaging_copy, "copy", Imaging_copy_impl, HPyFunc_NOARGS)
+static HPy Imaging_copy_impl(HPyContext *ctx, HPy self) {
+    PyObject *py_self = HPy_AsPyObject(ctx, self);
+    Imaging im = PyImaging_AsImaging(py_self);
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingCopy(im)));
 }
 
 static PyObject *
@@ -1086,14 +1084,17 @@ _getpalette(ImagingObject *self, PyObject *args) {
     return palette;
 }
 
-static PyObject *
-_getpalettemode(ImagingObject *self, PyObject *args) {
-    if (!self->image->palette) {
-        PyErr_SetString(PyExc_ValueError, no_palette);
-        return NULL;
+HPyDef_METH(Imaging_getpalettemode, "getpalettemode", Imaging_getpalettemode_impl, HPyFunc_NOARGS)
+static HPy Imaging_getpalettemode_impl(HPyContext *ctx, HPy self) {
+    PyObject *py_self = HPy_AsPyObject(ctx, self);
+    Imaging image = PyImaging_AsImaging(py_self);
+
+    if (!image->palette) {
+        HPyErr_SetString(ctx, ctx->h_ValueError, no_palette);
+        return HPy_NULL;
     }
 
-    return PyUnicode_FromString(self->image->palette->mode);
+    return HPyUnicode_FromString(ctx, image->palette->mode);
 }
 
 static inline int
@@ -3433,7 +3434,6 @@ static struct PyMethodDef methods[] = {
     {"convert2", (PyCFunction)_convert2, 1},
     {"convert_matrix", (PyCFunction)_convert_matrix, 1},
     {"convert_transparent", (PyCFunction)_convert_transparent, 1},
-    {"copy", (PyCFunction)_copy, 1},
     {"crop", (PyCFunction)_crop, 1},
     {"expand", (PyCFunction)_expand_image, 1},
     {"filter", (PyCFunction)_filter, 1},
@@ -3473,7 +3473,6 @@ static struct PyMethodDef methods[] = {
     {"setmode", (PyCFunction)im_setmode, 1},
 
     {"getpalette", (PyCFunction)_getpalette, 1},
-    {"getpalettemode", (PyCFunction)_getpalettemode, 1},
     {"putpalette", (PyCFunction)_putpalette, 1},
     {"putpalettealpha", (PyCFunction)_putpalettealpha, 1},
     {"putpalettealphas", (PyCFunction)_putpalettealphas, 1},
@@ -3604,12 +3603,19 @@ static PyType_Slot Imaging_Type_slots[] = {
     {0, NULL}
 };
 
+static HPyDef *Imaging_type_defines[] = {
+    &Imaging_getpalettemode,
+    &Imaging_copy,
+    NULL
+};
+
 HPyType_Spec Imaging_Type_spec = {
     .name = "ImagingCore",
     .basicsize = sizeof(ImagingObject),
     .flags = (HPy_TPFLAGS_DEFAULT | HPy_TPFLAGS_BASETYPE),
     .legacy_slots = Imaging_Type_slots,
     .legacy = true,
+    .defines = Imaging_type_defines,
 };
 
 #ifdef WITH_IMAGEDRAW
