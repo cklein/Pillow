@@ -18,7 +18,6 @@ import warnings
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
-
 def get_version():
     version_file = "src/PIL/_version.py"
     with open(version_file) as f:
@@ -52,6 +51,7 @@ if sys.platform == "win32" and sys.version_info >= (3, 10):
         )
     )
 
+HPY_ABI = 'cpython' if sys.implementation.name == 'cpython' else 'universal'
 
 _IMAGING = ("decode", "encode", "map", "display", "outline", "path")
 
@@ -1018,6 +1018,9 @@ try:
         package_dir={"": "src"},
         keywords=["Imaging"],
         zip_safe=not (debug_build() or PLATFORM_MINGW),
+        setup_requires=['hpy.devel'],
+        hpy_ext_modules=[],
+        hpy_abi=HPY_ABI,
     )
 except RequiredDependencyException as err:
     msg = f"""

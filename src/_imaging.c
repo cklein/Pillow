@@ -73,6 +73,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "hpy.h"
 
 #ifdef HAVE_LIBJPEG
 #include "jconfig.h"
@@ -3603,11 +3604,12 @@ static PyType_Slot Imaging_Type_slots[] = {
     {0, NULL}
 };
 
-PyType_Spec Imaging_Type_spec = {
+HPyType_Spec Imaging_Type_spec = {
     .name = "ImagingCore",
     .basicsize = sizeof(ImagingObject),
-    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE),
-    .slots = Imaging_Type_slots,
+    .flags = (HPy_TPFLAGS_DEFAULT | HPy_TPFLAGS_BASETYPE),
+    .legacy_slots = Imaging_Type_slots,
+    .legacy = true,
 };
 
 #ifdef WITH_IMAGEDRAW
@@ -4073,16 +4075,18 @@ static PyMethodDef functions[] = {
 };
 
 static int
-setup_module(PyObject *m) {
+setup_module(HPyContext *ctx, PyObject *m) {
     PyObject *d = PyModule_GetDict(m);
     const char *version = (char *)PILLOW_VERSION;
 
-    PyObject *imaging_type = PyType_FromSpec(&Imaging_Type_spec);
-    if (imaging_type == NULL) {
+    HPy h_array_type = HPyType_FromSpec(ctx, &Imaging_Type_spec, NULL);
+    if (HPy_IsNull(h_array_type)) {
         return -1;
     }
 
-    Imaging_Type = (PyTypeObject*) imaging_type;
+    Imaging_Type = (PyTypeObject*) HPy_AsPyObject(ctx, h_array_type);
+
+    HPy_Close(ctx, h_array_type);
 
     /* Ready object types */
 #ifdef WITH_IMAGEDRAW
@@ -4191,8 +4195,8 @@ setup_module(PyObject *m) {
     return 0;
 }
 
-PyMODINIT_FUNC
-PyInit__imaging(void) {
+HPy_MODINIT(_imaging)
+static HPy init__imaging_impl(HPyContext *ctx) {
     PyObject *m;
 
     static PyModuleDef module_def = {
@@ -4205,9 +4209,9 @@ PyInit__imaging(void) {
 
     m = PyModule_Create(&module_def);
 
-    if (setup_module(m) < 0) {
-        return NULL;
+    if (setup_module(ctx, m) < 0) {
+        return HPy_NULL;
     }
 
-    return m;
+    return HPy_FromPyObject(ctx, m);
 }
