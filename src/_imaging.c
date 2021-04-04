@@ -3364,13 +3364,14 @@ _effect_spread(ImagingObject *self, PyObject *args) {
 /* UTILITIES                                */
 /* -------------------------------------------------------------------- */
 
-static PyObject *
-_getcodecstatus(PyObject *self, PyObject *args) {
+
+HPyDef_METH(Imaging_getcodecstatus, "getcodecstatus", Imaging_getcodecstatus_impl, HPyFunc_VARARGS)
+static HPy Imaging_getcodecstatus_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int status;
     char *msg;
 
-    if (!PyArg_ParseTuple(args, "i", &status)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &status)) {
+        return HPy_NULL;
     }
 
     switch (status) {
@@ -3390,10 +3391,10 @@ _getcodecstatus(PyObject *self, PyObject *args) {
             msg = "out of memory";
             break;
         default:
-            Py_RETURN_NONE;
+            return HPy_Dup(ctx, ctx->h_None);;
     }
 
-    return PyUnicode_FromString(msg);
+    return HPyUnicode_FromString(ctx, msg);
 }
 
 /* -------------------------------------------------------------------- */
@@ -3606,6 +3607,11 @@ static PyType_Slot Imaging_Type_slots[] = {
 static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_copy,
+    &Imaging_copy,
+
+    /* Utilities */
+    &Imaging_getcodecstatus,
+
     NULL
 };
 
@@ -4037,9 +4043,6 @@ static PyMethodDef functions[] = {
 #ifdef HAVE_XCB
     {"grabscreen_x11", (PyCFunction)PyImaging_GrabScreenX11, 1},
 #endif
-
-    /* Utilities */
-    {"getcodecstatus", (PyCFunction)_getcodecstatus, 1},
 
 /* Special effects (experimental) */
 #ifdef WITH_EFFECTS
