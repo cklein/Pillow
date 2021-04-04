@@ -13,3 +13,4 @@ sphinx>=2.4
 sphinx-issues
 sphinx-removed-in
 sphinx-rtd-theme
+hpy.devel @ git+https://github.com/hpyproject/hpy.git@8e20b89116c2993188157c09a6070a64f8efbd82#egg=hpy.devel
