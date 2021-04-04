@@ -4075,7 +4075,9 @@ static PyMethodDef functions[] = {
 };
 
 static int
-setup_module(HPyContext *ctx, PyObject *m) {
+setup_module(HPyContext *ctx, HPy h_module) {
+
+    PyObject *m = HPy_AsPyObject(ctx, h_module);
     PyObject *d = PyModule_GetDict(m);
     const char *version = (char *)PILLOW_VERSION;
 
@@ -4195,23 +4197,26 @@ setup_module(HPyContext *ctx, PyObject *m) {
     return 0;
 }
 
+
 HPy_MODINIT(_imaging)
 static HPy init__imaging_impl(HPyContext *ctx) {
-    PyObject *m;
 
-    static PyModuleDef module_def = {
-        PyModuleDef_HEAD_INIT,
-        "_imaging", /* m_name */
-        NULL,       /* m_doc */
-        -1,         /* m_size */
-        functions,  /* m_methods */
+    static HPyModuleDef module_def = {
+        HPyModuleDef_HEAD_INIT,
+        .m_name = "_imaging",
+        .m_doc = NULL,
+        .m_size = -1,
+        .legacy_methods = functions,
     };
 
-    m = PyModule_Create(&module_def);
+    HPy m;
+    m = HPyModule_Create(ctx, &module_def);
+    if (HPy_IsNull(m))
+        return HPy_NULL;
 
     if (setup_module(ctx, m) < 0) {
         return HPy_NULL;
     }
 
-    return HPy_FromPyObject(ctx, m);
+    return m;
 }
