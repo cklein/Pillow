@@ -650,14 +650,12 @@ _new_block(PyObject *self, PyObject *args) {
 
 HPyDef_METH(linear_gradient, "linear_gradient", linear_gradient_impl, HPyFunc_VARARGS)
 static HPy linear_gradient_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
-    char *mode;
     HPy h_mode;
-
     if (!HPyArg_Parse(ctx, NULL, args, nargs, "O", &h_mode)) {
         return HPy_NULL;
     }
 
-    mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
+    const char *mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
     return HPy_FromPyObject(ctx, PyImagingNew(ImagingFillLinearGradient(mode)));
 }
 
@@ -672,43 +670,54 @@ HPyDef wedge = {
   }
 };
 
-static PyObject *
-_radial_gradient(PyObject *self, PyObject *args) {
-    char *mode;
-
-    if (!PyArg_ParseTuple(args, "s", &mode)) {
-        return NULL;
+HPyDef_METH(radial_gradient, "radial_gradient", radial_gradient_impl, HPyFunc_VARARGS)
+static HPy radial_gradient_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_mode;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "O", &h_mode)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingFillRadialGradient(mode));
+    const char *mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingFillRadialGradient(mode)));
 }
 
-static PyObject *
-_alpha_composite(ImagingObject *self, PyObject *args) {
-    ImagingObject *imagep1;
-    ImagingObject *imagep2;
-
-    if (!PyArg_ParseTuple(
-            args, "O!O!", Imaging_Type, &imagep1, Imaging_Type, &imagep2)) {
-        return NULL;
+HPyDef_METH(alpha_composite, "alpha_composite", alpha_composite_impl, HPyFunc_VARARGS)
+static HPy alpha_composite_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_image1, h_image2;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "OO", &h_image1, &h_image2)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingAlphaComposite(imagep1->image, imagep2->image));
+    HPy h_imaging_type = HPy_FromPyObject(ctx, (PyObject *)Imaging_Type);
+    if(!HPy_TypeCheck(ctx, h_image1, h_imaging_type) || !HPy_TypeCheck(ctx, h_image2, h_imaging_type)) {
+        HPyErr_SetString(ctx, ctx->h_TypeError, "Parameters must be Image objects");
+        return HPy_NULL;
+    }
+
+    ImagingObject *image1 = (ImagingObject *)HPy_AsPyObject(ctx, h_image1);
+    ImagingObject *image2 = (ImagingObject *)HPy_AsPyObject(ctx, h_image2);
+
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingAlphaComposite(image1->image, image2->image)));
 }
 
-static PyObject *
-_blend(ImagingObject *self, PyObject *args) {
-    ImagingObject *imagep1;
-    ImagingObject *imagep2;
-    double alpha;
-
-    alpha = 0.5;
-    if (!PyArg_ParseTuple(
-            args, "O!O!|d", Imaging_Type, &imagep1, Imaging_Type, &imagep2, &alpha)) {
-        return NULL;
+HPyDef_METH(blend, "blend", blend_impl, HPyFunc_VARARGS)
+static HPy blend_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_image1, h_image2;
+    double alpha = 0.5;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "OO|d", &h_image1, &h_image2, &alpha)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingBlend(imagep1->image, imagep2->image, (float)alpha));
+    HPy h_imaging_type = HPy_FromPyObject(ctx, (PyObject *)Imaging_Type);
+    if(!HPy_TypeCheck(ctx, h_image1, h_imaging_type) || !HPy_TypeCheck(ctx, h_image2, h_imaging_type)) {
+        HPyErr_SetString(ctx, ctx->h_TypeError, "Parameters must be Image objects");
+        return HPy_NULL;
+    }
+
+    ImagingObject *image1 = (ImagingObject *)HPy_AsPyObject(ctx, h_image1);
+    ImagingObject *image2 = (ImagingObject *)HPy_AsPyObject(ctx, h_image2);
+
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingBlend(image1->image, image2->image, (float)alpha)));
 }
 
 /* -------------------------------------------------------------------- */
@@ -917,21 +926,27 @@ static HPy Imaging_convert_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_
     );
 }
 
-static PyObject *
-_convert2(ImagingObject *self, PyObject *args) {
-    ImagingObject *imagep1;
-    ImagingObject *imagep2;
-    if (!PyArg_ParseTuple(
-            args, "O!O!", Imaging_Type, &imagep1, Imaging_Type, &imagep2)) {
-        return NULL;
+HPyDef_METH(convert2, "convert2", convert2_impl, HPyFunc_VARARGS)
+static HPy convert2_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_image1, h_image2;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "OO", &h_image1, &h_image2)) {
+        return HPy_NULL;
     }
 
-    if (!ImagingConvert2(imagep1->image, imagep2->image)) {
-        return NULL;
+    HPy h_imaging_type = HPy_FromPyObject(ctx, (PyObject *)Imaging_Type);
+    if(!HPy_TypeCheck(ctx, h_image1, h_imaging_type) || !HPy_TypeCheck(ctx, h_image2, h_imaging_type)) {
+        HPyErr_SetString(ctx, ctx->h_TypeError, "Parameters must be Image objects");
+        return HPy_NULL;
     }
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    ImagingObject *image1 = (ImagingObject *)HPy_AsPyObject(ctx, h_image1);
+    ImagingObject *image2 = (ImagingObject *)HPy_AsPyObject(ctx, h_image2);
+
+    if (!ImagingConvert2(image1->image, image2->image)) {
+        return HPy_NULL;
+    }
+
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
 static PyObject *
@@ -994,15 +1009,17 @@ _crop(ImagingObject *self, PyObject *args) {
     return PyImagingNew(ImagingCrop(self->image, x0, y0, x1, y1));
 }
 
-static PyObject *
-_expand_image(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_expand, "expand", Imaging_expand_impl, HPyFunc_VARARGS)
+static HPy Imaging_expand_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int x, y;
     int mode = 0;
-    if (!PyArg_ParseTuple(args, "ii|i", &x, &y, &mode)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "ii|i", &x, &y, &mode)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingExpand(self->image, x, y, mode));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingExpand(im->image, x, y, mode)));
 }
 
 static PyObject *
@@ -1041,29 +1058,26 @@ _filter(ImagingObject *self, PyObject *args) {
 }
 
 #ifdef WITH_UNSHARPMASK
-static PyObject *
-_gaussian_blur(ImagingObject *self, PyObject *args) {
-    Imaging imIn;
-    Imaging imOut;
-
-    float radius = 0;
+HPyDef_METH(Imaging_gaussian_blur, "gaussian_blur", Imaging_gaussian_blur_impl, HPyFunc_VARARGS)
+static HPy Imaging_gaussian_blur_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    float radius;
     int passes = 3;
-    if (!PyArg_ParseTuple(args, "f|i", &radius, &passes)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "f|i", &radius, &passes)) {
+        return HPy_NULL;
     }
 
-    imIn = self->image;
-    imOut = ImagingNewDirty(imIn->mode, imIn->xsize, imIn->ysize);
+    Imaging imIn = ((ImagingObject *)HPy_AsPyObject(ctx, self))->image;
+    Imaging imOut = ImagingNewDirty(imIn->mode, imIn->xsize, imIn->ysize);
     if (!imOut) {
-        return NULL;
+        return HPy_NULL;
     }
 
     if (!ImagingGaussianBlur(imOut, imIn, radius, passes)) {
         ImagingDelete(imOut);
-        return NULL;
+        return HPy_NULL;
     }
 
-    return PyImagingNew(imOut);
+    return HPy_FromPyObject(ctx, PyImagingNew(imOut));
 }
 #endif
 
@@ -1320,25 +1334,27 @@ _entropy(ImagingObject *self, PyObject *args) {
 }
 
 #ifdef WITH_MODEFILTER
-static PyObject *
-_modefilter(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_modefilter, "modefilter", Imaging_modefilter_impl, HPyFunc_VARARGS)
+static HPy Imaging_modefilter_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int size;
-    if (!PyArg_ParseTuple(args, "i", &size)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &size)) {
+        return HPy_NULL;
     }
-
-    return PyImagingNew(ImagingModeFilter(self->image, size));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingModeFilter(im->image, size)));
 }
 #endif
 
-static PyObject *
-_offset(ImagingObject *self, PyObject *args) {
+
+HPyDef_METH(Imaging_offset, "offset", Imaging_offset_impl, HPyFunc_VARARGS)
+static HPy Imaging_offset_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int xoffset, yoffset;
-    if (!PyArg_ParseTuple(args, "ii", &xoffset, &yoffset)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "ii", &xoffset, &yoffset)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingOffset(self->image, xoffset, yoffset));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingOffset(im->image, xoffset, yoffset)));
 }
 
 static PyObject *
@@ -3366,15 +3382,15 @@ _effect_noise(ImagingObject *self, PyObject *args) {
     return PyImagingNew(ImagingEffectNoise(xsize, ysize, sigma));
 }
 
-static PyObject *
-_effect_spread(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_effect_spread, "effect_spread", Imaging_effect_spread_impl, HPyFunc_VARARGS)
+static HPy Imaging_effect_spread_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int dist;
-
-    if (!PyArg_ParseTuple(args, "i", &dist)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &dist)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingEffectSpread(self->image, dist));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingEffectSpread(im->image, dist)));
 }
 
 #endif
@@ -3450,18 +3466,12 @@ static struct PyMethodDef methods[] = {
 
     /* Standard processing methods (Image) */
     {"color_lut_3d", (PyCFunction)_color_lut_3d, 1},
-    {"convert2", (PyCFunction)_convert2, 1},
     {"convert_matrix", (PyCFunction)_convert_matrix, 1},
     {"convert_transparent", (PyCFunction)_convert_transparent, 1},
     {"crop", (PyCFunction)_crop, 1},
-    {"expand", (PyCFunction)_expand_image, 1},
     {"filter", (PyCFunction)_filter, 1},
     {"histogram", (PyCFunction)_histogram, 1},
     {"entropy", (PyCFunction)_entropy, 1},
-#ifdef WITH_MODEFILTER
-    {"modefilter", (PyCFunction)_modefilter, 1},
-#endif
-    {"offset", (PyCFunction)_offset, 1},
     {"paste", (PyCFunction)_paste, 1},
     {"point", (PyCFunction)_point, 1},
     {"point_transform", (PyCFunction)_point_transform, 1},
@@ -3515,16 +3525,10 @@ static struct PyMethodDef methods[] = {
 
 #ifdef WITH_UNSHARPMASK
     /* Kevin Cazabon's unsharpmask extension */
-    {"gaussian_blur", (PyCFunction)_gaussian_blur, 1},
     {"unsharp_mask", (PyCFunction)_unsharp_mask, 1},
 #endif
 
     {"box_blur", (PyCFunction)_box_blur, 1},
-
-#ifdef WITH_EFFECTS
-    /* Special effects */
-    {"effect_spread", (PyCFunction)_effect_spread, 1},
-#endif
 
     /* Misc. */
     {"new_block", (PyCFunction)_new_block, 1},
@@ -3622,10 +3626,26 @@ static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_convert,
     &Imaging_copy,
+    &Imaging_expand,
+    &Imaging_offset,
     &Imaging_transpose,
+
+#ifdef WITH_MODEFILTER
+    &Imaging_modefilter,
+#endif
 
 #ifdef WITH_QUANTIZE
     &Imaging_quantize,
+#endif
+
+#ifdef WITH_EFFECTS
+    /* Special effects */
+    &Imaging_effect_spread,
+#endif
+
+#ifdef WITH_UNSHARPMASK
+    /* Kevin Cazabon's unsharpmask extension */
+    &Imaging_gaussian_blur,
 #endif
 
     /* Utilities */
@@ -3773,102 +3793,85 @@ static HPy reset_stats_impl(HPyContext *ctx, HPy self) {
     return HPy_Dup(ctx, ctx->h_None);
 }
 
-static PyObject *
-_get_alignment(PyObject *self, PyObject *args) {
-    if (!PyArg_ParseTuple(args, ":get_alignment")) {
-        return NULL;
-    }
-
-    return PyLong_FromLong(ImagingDefaultArena.alignment);
+HPyDef_METH(get_alignment, "get_alignment", get_alignment_impl, HPyFunc_NOARGS)
+static HPy get_alignment_impl(HPyContext *ctx, HPy self) {
+    return HPyLong_FromLong(ctx, ImagingDefaultArena.alignment);
 }
 
-static PyObject *
-_get_block_size(PyObject *self, PyObject *args) {
-    if (!PyArg_ParseTuple(args, ":get_block_size")) {
-        return NULL;
-    }
-
-    return PyLong_FromLong(ImagingDefaultArena.block_size);
+HPyDef_METH(get_block_size, "get_block_size", get_block_size_impl, HPyFunc_NOARGS)
+static HPy get_block_size_impl(HPyContext *ctx, HPy self) {
+    return HPyLong_FromLong(ctx, ImagingDefaultArena.block_size);
 }
 
-static PyObject *
-_get_blocks_max(PyObject *self, PyObject *args) {
-    if (!PyArg_ParseTuple(args, ":get_blocks_max")) {
-        return NULL;
-    }
-
-    return PyLong_FromLong(ImagingDefaultArena.blocks_max);
+HPyDef_METH(get_blocks_max, "get_blocks_max", get_blocks_max_impl, HPyFunc_NOARGS)
+static HPy get_blocks_max_impl(HPyContext *ctx, HPy self) {
+    return HPyLong_FromLong(ctx, ImagingDefaultArena.blocks_max);
 }
 
-static PyObject *
-_set_alignment(PyObject *self, PyObject *args) {
+HPyDef_METH(set_alignment, "set_alignment", set_alignment_impl, HPyFunc_VARARGS)
+static HPy set_alignment_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int alignment;
-    if (!PyArg_ParseTuple(args, "i:set_alignment", &alignment)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &alignment)) {
+        return HPy_NULL;
     }
 
     if (alignment < 1 || alignment > 128) {
-        PyErr_SetString(PyExc_ValueError, "alignment should be from 1 to 128");
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, "alignment should be from 1 to 128");
+        return HPy_NULL;
     }
     /* Is power of two */
     if (alignment & (alignment - 1)) {
-        PyErr_SetString(PyExc_ValueError, "alignment should be power of two");
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, "alignment should be power of two");
+        return HPy_NULL;
     }
 
     ImagingDefaultArena.alignment = alignment;
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
-static PyObject *
-_set_block_size(PyObject *self, PyObject *args) {
+HPyDef_METH(set_block_size, "set_block_size", set_block_size_impl, HPyFunc_VARARGS)
+static HPy set_block_size_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int block_size;
-    if (!PyArg_ParseTuple(args, "i:set_block_size", &block_size)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &block_size)) {
+        return HPy_NULL;
     }
 
     if (block_size <= 0) {
-        PyErr_SetString(PyExc_ValueError, "block_size should be greater than 0");
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, "block_size should be greater than 0");
+        return HPy_NULL;
     }
 
     if (block_size & 0xfff) {
-        PyErr_SetString(PyExc_ValueError, "block_size should be multiple of 4096");
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, "block_size should be multiple of 4096");
+        return HPy_NULL;
     }
 
     ImagingDefaultArena.block_size = block_size;
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
-static PyObject *
-_set_blocks_max(PyObject *self, PyObject *args) {
+HPyDef_METH(set_blocks_max, "set_blocks_max", set_blocks_max_impl, HPyFunc_VARARGS)
+static HPy set_blocks_max_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int blocks_max;
-    if (!PyArg_ParseTuple(args, "i:set_blocks_max", &blocks_max)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &blocks_max)) {
+        return HPy_NULL;
     }
 
     if (blocks_max < 0) {
-        PyErr_SetString(PyExc_ValueError, "blocks_max should be greater than 0");
-        return NULL;
-    } else if (
-        (unsigned long)blocks_max >
-        SIZE_MAX / sizeof(ImagingDefaultArena.blocks_pool[0])) {
-        PyErr_SetString(PyExc_ValueError, "blocks_max is too large");
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, "blocks_max should be greater than 0");
+        return HPy_NULL;
+    } else if ((unsigned long)blocks_max > SIZE_MAX / sizeof(ImagingDefaultArena.blocks_pool[0])) {
+        HPyErr_SetString(ctx, ctx->h_ValueError, "blocks_max is too large");
+        return HPy_NULL;
     }
 
     if (!ImagingMemorySetBlocksMax(&ImagingDefaultArena, blocks_max)) {
-        return ImagingError_MemoryError();
+        return HPyErr_NoMemory(ctx);
     }
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
 
@@ -3984,14 +3987,9 @@ PyImaging_MapBuffer(PyObject *self, PyObject *args);
 static PyMethodDef functions[] = {
 
     /* Object factories */
-    {"alpha_composite", (PyCFunction)_alpha_composite, 1},
-    {"blend", (PyCFunction)_blend, 1},
     {"fill", (PyCFunction)_fill, 1},
     {"new", (PyCFunction)_new, 1},
     {"merge", (PyCFunction)_merge, 1},
-
-    /* Functions */
-    {"convert", (PyCFunction)_convert2, 1},
 
     /* Codecs */
     {"bcn_decoder", (PyCFunction)PyImaging_BcnDecoderNew, 1},
@@ -4055,7 +4053,6 @@ static PyMethodDef functions[] = {
 #ifdef WITH_EFFECTS
     {"effect_mandelbrot", (PyCFunction)_effect_mandelbrot, 1},
     {"effect_noise", (PyCFunction)_effect_noise, 1},
-    {"radial_gradient", (PyCFunction)_radial_gradient, 1},
 #endif
 
 /* Drawing support stuff */
@@ -4073,14 +4070,6 @@ static PyMethodDef functions[] = {
 #ifdef WITH_ARROW
     {"outline", (PyCFunction)PyOutline_Create, 1},
 #endif
-
-    /* Resource management */
-    {"get_alignment", (PyCFunction)_get_alignment, 1},
-    {"get_block_size", (PyCFunction)_get_block_size, 1},
-    {"get_blocks_max", (PyCFunction)_get_blocks_max, 1},
-    {"set_alignment", (PyCFunction)_set_alignment, 1},
-    {"set_block_size", (PyCFunction)_set_block_size, 1},
-    {"set_blocks_max", (PyCFunction)_set_blocks_max, 1},
 
     {NULL, NULL} /* sentinel */
 };
@@ -4209,15 +4198,31 @@ setup_module(HPyContext *ctx, HPy h_module) {
 }
 
 static HPyDef *module_defines[] = {
+    /* Object factories */
+    &alpha_composite,
+    &blend,
+
+    /* Standard processing methods (Image) */
+    &convert2,
+
     /* Special effects (experimental) */
 #ifdef WITH_EFFECTS
     &linear_gradient,
+    &radial_gradient,
     &wedge,
 #endif
     /* Resource management */
     &clear_cache,
     &get_stats,
     &reset_stats,
+    &get_alignment,
+    &get_block_size,
+    &get_blocks_max,
+    &set_alignment,
+    &set_block_size,
+    &set_blocks_max,
+
+
     NULL
 };
 
