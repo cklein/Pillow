@@ -51,7 +51,7 @@ if sys.platform == "win32" and sys.version_info >= (3, 10):
         )
     )
 
-HPY_ABI = 'cpython' if sys.implementation.name == 'cpython' else 'universal'
+HPY_ABI = "cpython" if sys.implementation.name == "cpython" else "universal"
 
 _IMAGING = ("decode", "encode", "map", "display", "outline", "path")
 
@@ -408,7 +408,7 @@ class pil_build_ext(build_ext):
     def build_extensions(self):
 
         library_dirs = []
-        include_dirs = []
+        include_dirs = ["src/hpy/devel/include"]
 
         pkg_config = None
         if _cmd_exists(os.environ.get("PKG_CONFIG", "pkg-config")):
@@ -969,6 +969,19 @@ ext_modules = [
     Extension("PIL._imagingmorph", ["src/_imagingmorph.c"]),
 ]
 
+files.extend([
+    "src/hpy/devel/src/runtime/argparse.c",
+    "src/hpy/devel/src/runtime/ctx_call.c",
+    "src/hpy/devel/src/runtime/ctx_listbuilder.c",
+    "src/hpy/devel/src/runtime/ctx_module.c",
+    "src/hpy/devel/src/runtime/ctx_object.c",
+    "src/hpy/devel/src/runtime/ctx_tracker.c",
+    "src/hpy/devel/src/runtime/ctx_tuple.c",
+    "src/hpy/devel/src/runtime/ctx_tuplebuilder.c",
+    "src/hpy/devel/src/runtime/ctx_type.c",
+    "src/hpy/devel/src/runtime/helpers.c",
+])
+
 with open("README.md") as f:
     long_description = f.read()
 
@@ -1018,7 +1031,7 @@ try:
         package_dir={"": "src"},
         keywords=["Imaging"],
         zip_safe=not (debug_build() or PLATFORM_MINGW),
-        setup_requires=['hpy.devel'],
+        setup_requires=["hpy.devel"],
         hpy_ext_modules=[],
         hpy_abi=HPY_ABI,
     )
