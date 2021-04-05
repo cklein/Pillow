@@ -3862,18 +3862,16 @@ _set_blocks_max(PyObject *self, PyObject *args) {
     return Py_None;
 }
 
-static PyObject *
-_clear_cache(PyObject *self, PyObject *args) {
-    int i = 0;
 
-    if (!PyArg_ParseTuple(args, "|i:clear_cache", &i)) {
-        return NULL;
+HPyDef_METH(clear_cache, "clear_cache", clear_cache_impl, HPyFunc_VARARGS)
+static HPy clear_cache_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    int i = 0;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "|i:clear_cache", &i)) {
+        return HPy_NULL;
     }
 
     ImagingMemoryClearCache(&ImagingDefaultArena, i);
-
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
 /* -------------------------------------------------------------------- */
@@ -4078,7 +4076,6 @@ static PyMethodDef functions[] = {
     {"set_alignment", (PyCFunction)_set_alignment, 1},
     {"set_block_size", (PyCFunction)_set_block_size, 1},
     {"set_blocks_max", (PyCFunction)_set_blocks_max, 1},
-    {"clear_cache", (PyCFunction)_clear_cache, 1},
 
     {NULL, NULL} /* sentinel */
 };
@@ -4206,6 +4203,10 @@ setup_module(HPyContext *ctx, HPy h_module) {
     return 0;
 }
 
+static HPyDef *module_defines[] = {
+    &clear_cache,
+    NULL
+};
 
 HPy_MODINIT(_imaging)
 static HPy init__imaging_impl(HPyContext *ctx) {
@@ -4216,6 +4217,7 @@ static HPy init__imaging_impl(HPyContext *ctx) {
         .m_doc = NULL,
         .m_size = -1,
         .legacy_methods = functions,
+        .defines = module_defines,
     };
 
     HPy m;
