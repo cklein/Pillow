@@ -2004,17 +2004,17 @@ _transform2(ImagingObject *self, PyObject *args) {
     return Py_None;
 }
 
-static PyObject *
-_transpose(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_transpose, "transpose", Imaging_transpose_impl, HPyFunc_VARARGS)
+static HPy Imaging_transpose_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     Imaging imIn;
     Imaging imOut;
 
     int op;
-    if (!PyArg_ParseTuple(args, "i", &op)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "i", &op)) {
+        return HPy_NULL;
     }
 
-    imIn = self->image;
+    imIn = ((ImagingObject *) HPy_AsPyObject(ctx, self))->image;
 
     switch (op) {
         case 0: /* flip left right */
@@ -2029,8 +2029,8 @@ _transpose(ImagingObject *self, PyObject *args) {
             imOut = ImagingNewDirty(imIn->mode, imIn->ysize, imIn->xsize);
             break;
         default:
-            PyErr_SetString(PyExc_ValueError, "No such transpose operation");
-            return NULL;
+            HPyErr_SetString(ctx, ctx->h_ValueError, "No such transpose operation");
+            return HPy_NULL;
     }
 
     if (imOut) {
@@ -2059,7 +2059,7 @@ _transpose(ImagingObject *self, PyObject *args) {
         }
     }
 
-    return PyImagingNew(imOut);
+    return HPy_FromPyObject(ctx, PyImagingNew(imOut));
 }
 
 #ifdef WITH_UNSHARPMASK
@@ -3471,7 +3471,6 @@ static struct PyMethodDef methods[] = {
 #endif
     {"resize", (PyCFunction)_resize, 1},
     {"reduce", (PyCFunction)_reduce, 1},
-    {"transpose", (PyCFunction)_transpose, 1},
     {"transform2", (PyCFunction)_transform2, 1},
 
     {"isblock", (PyCFunction)_isblock, 1},
@@ -3623,6 +3622,7 @@ static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_convert,
     &Imaging_copy,
+    &Imaging_transpose,
 
 #ifdef WITH_QUANTIZE
     &Imaging_quantize,
