@@ -886,30 +886,35 @@ _color_lut_3d(ImagingObject *self, PyObject *args) {
     return PyImagingNew(imOut);
 }
 
-static PyObject *
-_convert(ImagingObject *self, PyObject *args) {
-    char *mode;
+HPyDef_METH(Imaging_convert, "convert", Imaging_convert_impl, HPyFunc_VARARGS)
+static HPy Imaging_convert_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_mode, h_paletteimage = HPy_NULL;
     int dither = 0;
-    ImagingObject *paletteimage = NULL;
+    ImagingPalette palette = NULL;
+    const char *mode;
 
-    if (!PyArg_ParseTuple(args, "s|iO", &mode, &dither, &paletteimage)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "O|iO", &h_mode, &dither, &h_paletteimage)) {
+        return HPy_NULL;
     }
-    if (paletteimage != NULL) {
+    if (!HPy_IsNull(h_paletteimage)) {
+        ImagingObject *paletteimage = (ImagingObject *) HPy_AsPyObject(ctx, h_paletteimage);
         if (!PyImaging_Check(paletteimage)) {
-            PyObject_Print((PyObject *)paletteimage, stderr, 0);
-            PyErr_SetString(
-                PyExc_ValueError, "palette argument must be image with mode 'P'");
-            return NULL;
+            // PyObject_Print((PyObject *)paletteimage, stderr, 0);
+            HPyErr_SetString(ctx, ctx->h_ValueError, "palette argument must be image with mode 'P'");
+            return HPy_NULL;
         }
-        if (paletteimage->image->palette == NULL) {
-            PyErr_SetString(PyExc_ValueError, "null palette");
-            return NULL;
+        palette = paletteimage->image->palette;
+        if (palette == NULL) {
+            HPyErr_SetString(ctx, ctx->h_ValueError, "null palette");
+            return HPy_NULL;
         }
     }
-
-    return PyImagingNew(ImagingConvert(
-        self->image, mode, paletteimage ? paletteimage->image->palette : NULL, dither));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
+    return HPy_FromPyObject(
+        ctx,
+        PyImagingNew(ImagingConvert(im->image, mode, palette, dither))
+    );
 }
 
 static PyObject *
@@ -3444,7 +3449,6 @@ static struct PyMethodDef methods[] = {
 
     /* Standard processing methods (Image) */
     {"color_lut_3d", (PyCFunction)_color_lut_3d, 1},
-    {"convert", (PyCFunction)_convert, 1},
     {"convert2", (PyCFunction)_convert2, 1},
     {"convert_matrix", (PyCFunction)_convert_matrix, 1},
     {"convert_transparent", (PyCFunction)_convert_transparent, 1},
@@ -3619,6 +3623,7 @@ static PyType_Slot Imaging_Type_slots[] = {
 
 static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
+    &Imaging_convert,
     &Imaging_copy,
 
     /* Utilities */
