@@ -3607,7 +3607,6 @@ static PyType_Slot Imaging_Type_slots[] = {
 static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_copy,
-    &Imaging_copy,
 
     /* Utilities */
     &Imaging_getcodecstatus,
@@ -3721,38 +3720,29 @@ static PyTypeObject PixelAccess_Type = {
 
 /* -------------------------------------------------------------------- */
 
-static PyObject *
-_get_stats(PyObject *self, PyObject *args) {
-    PyObject *d;
+HPyDef_METH(get_stats, "get_stats", get_stats_impl, HPyFunc_NOARGS)
+static HPy get_stats_impl(HPyContext *ctx, HPy self) {
+    HPy h_stats;
     ImagingMemoryArena arena = &ImagingDefaultArena;
 
-    if (!PyArg_ParseTuple(args, ":get_stats")) {
-        return NULL;
+    h_stats = HPyDict_New(ctx);
+    if (HPy_IsNull(h_stats)) {
+        return HPy_NULL;
     }
 
-    d = PyDict_New();
-    if (!d) {
-        return NULL;
-    }
-    PyDict_SetItemString(d, "new_count", PyLong_FromLong(arena->stats_new_count));
-    PyDict_SetItemString(
-        d, "allocated_blocks", PyLong_FromLong(arena->stats_allocated_blocks));
-    PyDict_SetItemString(
-        d, "reused_blocks", PyLong_FromLong(arena->stats_reused_blocks));
-    PyDict_SetItemString(
-        d, "reallocated_blocks", PyLong_FromLong(arena->stats_reallocated_blocks));
-    PyDict_SetItemString(d, "freed_blocks", PyLong_FromLong(arena->stats_freed_blocks));
-    PyDict_SetItemString(d, "blocks_cached", PyLong_FromLong(arena->blocks_cached));
-    return d;
+    PyObject *stats = HPy_AsPyObject(ctx, h_stats);
+    PyDict_SetItemString(stats, "new_count", PyLong_FromLong(arena->stats_new_count));
+    PyDict_SetItemString(stats, "allocated_blocks", PyLong_FromLong(arena->stats_allocated_blocks));
+    PyDict_SetItemString(stats, "reused_blocks", PyLong_FromLong(arena->stats_reused_blocks));
+    PyDict_SetItemString(stats, "reallocated_blocks", PyLong_FromLong(arena->stats_reallocated_blocks));
+    PyDict_SetItemString(stats, "freed_blocks", PyLong_FromLong(arena->stats_freed_blocks));
+    PyDict_SetItemString(stats, "blocks_cached", PyLong_FromLong(arena->blocks_cached));
+    return HPy_FromPyObject(ctx, stats);
 }
 
-static PyObject *
-_reset_stats(PyObject *self, PyObject *args) {
+HPyDef_METH(reset_stats, "reset_stats", reset_stats_impl, HPyFunc_NOARGS)
+static HPy reset_stats_impl(HPyContext *ctx, HPy self) {
     ImagingMemoryArena arena = &ImagingDefaultArena;
-
-    if (!PyArg_ParseTuple(args, ":reset_stats")) {
-        return NULL;
-    }
 
     arena->stats_new_count = 0;
     arena->stats_allocated_blocks = 0;
@@ -3760,8 +3750,7 @@ _reset_stats(PyObject *self, PyObject *args) {
     arena->stats_reallocated_blocks = 0;
     arena->stats_freed_blocks = 0;
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
 static PyObject *
@@ -4068,8 +4057,6 @@ static PyMethodDef functions[] = {
 #endif
 
     /* Resource management */
-    {"get_stats", (PyCFunction)_get_stats, 1},
-    {"reset_stats", (PyCFunction)_reset_stats, 1},
     {"get_alignment", (PyCFunction)_get_alignment, 1},
     {"get_block_size", (PyCFunction)_get_block_size, 1},
     {"get_blocks_max", (PyCFunction)_get_blocks_max, 1},
@@ -4204,7 +4191,10 @@ setup_module(HPyContext *ctx, HPy h_module) {
 }
 
 static HPyDef *module_defines[] = {
+    /* Resource management */
     &clear_cache,
+    &get_stats,
+    &reset_stats,
     NULL
 };
 
