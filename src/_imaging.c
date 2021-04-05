@@ -648,16 +648,29 @@ _new_block(PyObject *self, PyObject *args) {
     return PyImagingNew(ImagingNewBlock(mode, xsize, ysize));
 }
 
-static PyObject *
-_linear_gradient(PyObject *self, PyObject *args) {
+HPyDef_METH(linear_gradient, "linear_gradient", linear_gradient_impl, HPyFunc_VARARGS)
+static HPy linear_gradient_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     char *mode;
+    HPy h_mode;
 
-    if (!PyArg_ParseTuple(args, "s", &mode)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "O", &h_mode)) {
+        return HPy_NULL;
     }
 
-    return PyImagingNew(ImagingFillLinearGradient(mode));
+    mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingFillLinearGradient(mode)));
 }
+
+/* Compatibility */
+HPyDef wedge = {
+  .kind = HPyDef_Kind_Meth,
+  .meth = {
+    .name = "wedge",
+    .impl = linear_gradient_impl,
+    .cpy_trampoline = linear_gradient_trampoline,
+    .signature = HPyFunc_VARARGS,
+  }
+};
 
 static PyObject *
 _radial_gradient(PyObject *self, PyObject *args) {
@@ -4035,9 +4048,7 @@ static PyMethodDef functions[] = {
 #ifdef WITH_EFFECTS
     {"effect_mandelbrot", (PyCFunction)_effect_mandelbrot, 1},
     {"effect_noise", (PyCFunction)_effect_noise, 1},
-    {"linear_gradient", (PyCFunction)_linear_gradient, 1},
     {"radial_gradient", (PyCFunction)_radial_gradient, 1},
-    {"wedge", (PyCFunction)_linear_gradient, 1}, /* Compatibility */
 #endif
 
 /* Drawing support stuff */
@@ -4191,6 +4202,11 @@ setup_module(HPyContext *ctx, HPy h_module) {
 }
 
 static HPyDef *module_defines[] = {
+    /* Special effects (experimental) */
+#ifdef WITH_EFFECTS
+    &linear_gradient,
+    &wedge,
+#endif
     /* Resource management */
     &clear_cache,
     &get_stats,
