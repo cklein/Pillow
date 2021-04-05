@@ -1618,21 +1618,22 @@ _putdata(ImagingObject *self, PyObject *args) {
 
 #ifdef WITH_QUANTIZE
 
-static PyObject *
-_quantize(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_quantize, "quantize", Imaging_quantize_impl, HPyFunc_VARARGS)
+static HPy Imaging_quantize_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int colours = 256;
     int method = 0;
     int kmeans = 0;
-    if (!PyArg_ParseTuple(args, "|iii", &colours, &method, &kmeans)) {
-        return NULL;
+
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "|iii", &colours, &method, &kmeans)) {
+        return HPy_NULL;
     }
 
-    if (!self->image->xsize || !self->image->ysize) {
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    if (!im->image->xsize || !im->image->ysize) {
         /* no content; return an empty image */
-        return PyImagingNew(ImagingNew("P", self->image->xsize, self->image->ysize));
+        return HPy_FromPyObject(ctx, PyImagingNew(ImagingNew("P", im->image->xsize, im->image->ysize)));
     }
-
-    return PyImagingNew(ImagingQuantize(self->image, colours, method, kmeans));
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingQuantize(im->image, colours, method, kmeans)));
 }
 #endif
 
@@ -3465,9 +3466,6 @@ static struct PyMethodDef methods[] = {
     {"point", (PyCFunction)_point, 1},
     {"point_transform", (PyCFunction)_point_transform, 1},
     {"putdata", (PyCFunction)_putdata, 1},
-#ifdef WITH_QUANTIZE
-    {"quantize", (PyCFunction)_quantize, 1},
-#endif
 #ifdef WITH_RANKFILTER
     {"rankfilter", (PyCFunction)_rankfilter, 1},
 #endif
@@ -3625,6 +3623,10 @@ static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_convert,
     &Imaging_copy,
+
+#ifdef WITH_QUANTIZE
+    &Imaging_quantize,
+#endif
 
     /* Utilities */
     &Imaging_getcodecstatus,
