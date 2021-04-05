@@ -591,37 +591,52 @@ getink(PyObject *color, Imaging im, char *ink) {
 /* FACTORIES                                */
 /* -------------------------------------------------------------------- */
 
-static PyObject *
-_fill(PyObject *self, PyObject *args) {
+HPyDef_METH(fill, "fill", fill_impl, HPyFunc_VARARGS)
+static HPy fill_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_mode, h_size = HPy_NULL, h_color = HPy_NULL;
+    int xsize = 256, ysize = 256;
+
     char *mode;
-    int xsize, ysize;
-    PyObject *color;
     char buffer[4];
     Imaging im;
 
-    xsize = ysize = 256;
-    color = NULL;
-
-    if (!PyArg_ParseTuple(args, "s|(ii)O", &mode, &xsize, &ysize, &color)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "O|OO", &h_mode, &h_size, &h_color)) {
+        return HPy_NULL;
     }
+
+    if(!HPy_IsNull(h_size)) {
+        if(!HPyTuple_Check(ctx, h_size)) {
+            HPyErr_SetString(ctx, ctx->h_TypeError, "Expected tuple with 2 ints");
+            return HPy_NULL;
+        }
+        PyObject *size = HPy_AsPyObject(ctx, h_size);
+        if(PyTuple_Size(size) != 2) {
+            HPyErr_SetString(ctx, ctx->h_TypeError, "Expected tuple with 2 ints");
+            return HPy_NULL;
+        }
+
+        xsize = HPyLong_AsLong(ctx, HPy_FromPyObject(ctx, PyTuple_GET_ITEM(size, 0)));
+        ysize = HPyLong_AsLong(ctx, HPy_FromPyObject(ctx, PyTuple_GET_ITEM(size, 1)));
+    }
+
+    mode = HPyBytes_AsString(ctx, h_mode);
 
     im = ImagingNewDirty(mode, xsize, ysize);
     if (!im) {
-        return NULL;
+        return HPy_NULL;
     }
 
     buffer[0] = buffer[1] = buffer[2] = buffer[3] = 0;
-    if (color) {
-        if (!getink(color, im, buffer)) {
+    if (!HPy_IsNull(h_color)) {
+        if (!getink(HPy_AsPyObject(ctx, h_color), im, buffer)) {
             ImagingDelete(im);
-            return NULL;
+            return HPy_NULL;
         }
     }
 
     (void)ImagingFill(im, buffer);
 
-    return PyImagingNew(im);
+    return HPy_FromPyObject(ctx, PyImagingNew(im));
 }
 
 static PyObject *
@@ -3607,7 +3622,6 @@ static PyType_Slot Imaging_Type_slots[] = {
 static HPyDef *Imaging_type_defines[] = {
     &Imaging_getpalettemode,
     &Imaging_copy,
-    &Imaging_copy,
 
     /* Utilities */
     &Imaging_getcodecstatus,
@@ -3967,7 +3981,6 @@ static PyMethodDef functions[] = {
     /* Object factories */
     {"alpha_composite", (PyCFunction)_alpha_composite, 1},
     {"blend", (PyCFunction)_blend, 1},
-    {"fill", (PyCFunction)_fill, 1},
     {"new", (PyCFunction)_new, 1},
     {"merge", (PyCFunction)_merge, 1},
 
@@ -4192,6 +4205,9 @@ setup_module(HPyContext *ctx, HPy h_module) {
 }
 
 static HPyDef *module_defines[] = {
+    /* Object factories */
+    &fill,
+
     /* Resource management */
     &clear_cache,
     &get_stats,
