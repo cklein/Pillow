@@ -3400,8 +3400,8 @@ static HPy Imaging_effect_spread_impl(HPyContext *ctx, HPy self, HPy *args, HPy_
 /* -------------------------------------------------------------------- */
 
 
-HPyDef_METH(Imaging_getcodecstatus, "getcodecstatus", Imaging_getcodecstatus_impl, HPyFunc_VARARGS)
-static HPy Imaging_getcodecstatus_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+HPyDef_METH(getcodecstatus, "getcodecstatus", getcodecstatus_impl, HPyFunc_VARARGS)
+static HPy getcodecstatus_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int status;
     char *msg;
 
@@ -3647,9 +3647,6 @@ static HPyDef *Imaging_type_defines[] = {
     /* Kevin Cazabon's unsharpmask extension */
     &Imaging_gaussian_blur,
 #endif
-
-    /* Utilities */
-    &Imaging_getcodecstatus,
 
     NULL
 };
@@ -4222,6 +4219,8 @@ static HPyDef *module_defines[] = {
     &set_block_size,
     &set_blocks_max,
 
+    /* Utilities */
+    &getcodecstatus,
 
     NULL
 };
