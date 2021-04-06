@@ -1795,14 +1795,14 @@ _putpixel(ImagingObject *self, PyObject *args) {
 }
 
 #ifdef WITH_RANKFILTER
-static PyObject *
-_rankfilter(ImagingObject *self, PyObject *args) {
+HPyDef_METH(Imaging_rankfilter, "rankfilter", Imaging_rankfilter_impl, HPyFunc_VARARGS)
+static HPy Imaging_rankfilter_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     int size, rank;
-    if (!PyArg_ParseTuple(args, "ii", &size, &rank)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "ii", &size, &rank)) {
+        return HPy_NULL;
     }
-
-    return PyImagingNew(ImagingRankFilter(self->image, size, rank));
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+    return HPy_FromPyObject(ctx, PyImagingNew(ImagingRankFilter(im->image, size, rank)));
 }
 #endif
 
@@ -3486,9 +3486,6 @@ static struct PyMethodDef methods[] = {
     {"point", (PyCFunction)_point, 1},
     {"point_transform", (PyCFunction)_point_transform, 1},
     {"putdata", (PyCFunction)_putdata, 1},
-#ifdef WITH_RANKFILTER
-    {"rankfilter", (PyCFunction)_rankfilter, 1},
-#endif
     {"resize", (PyCFunction)_resize, 1},
     {"reduce", (PyCFunction)_reduce, 1},
     {"transform2", (PyCFunction)_transform2, 1},
@@ -3642,6 +3639,10 @@ static HPyDef *Imaging_type_defines[] = {
 
 #ifdef WITH_MODEFILTER
     &Imaging_modefilter,
+#endif
+
+#ifdef WITH_RANKFILTER
+    &Imaging_rankfilter,
 #endif
 
 #ifdef WITH_QUANTIZE
