@@ -20,6 +20,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+#include "hpy.h"
 #include "libImaging/Imaging.h"
 
 #include <ft2build.h>
@@ -1331,12 +1332,12 @@ static PyMethodDef _functions[] = {
     {"getfont", (PyCFunction)getfont, METH_VARARGS | METH_KEYWORDS}, {NULL, NULL}};
 
 static int
-setup_module(PyObject *m) {
-    PyObject *d;
+setup_module(HPyContext *ctx, HPy h_module) {
+    PyObject *m = HPy_AsPyObject(ctx, h_module);
+    PyObject *d = PyModule_GetDict(m);
+
     PyObject *v;
     int major, minor, patch;
-
-    d = PyModule_GetDict(m);
 
     /* Ready object type */
     PyType_Ready(&Font_Type);
@@ -1400,22 +1401,24 @@ setup_module(PyObject *m) {
     return 0;
 }
 
-PyMODINIT_FUNC
-PyInit__imagingft(void) {
-    PyObject *m;
+HPy_MODINIT(_imagingft)
+static HPy init__imagingft_impl(HPyContext *ctx) {
 
-    static PyModuleDef module_def = {
-        PyModuleDef_HEAD_INIT,
-        "_imagingft", /* m_name */
-        NULL,         /* m_doc */
-        -1,           /* m_size */
-        _functions,   /* m_methods */
+    static HPyModuleDef module_def = {
+        HPyModuleDef_HEAD_INIT,
+        .m_name = "_imagingft",
+        .m_doc = NULL,
+        .m_size = -1,
+        .legacy_methods = _functions,
     };
 
-    m = PyModule_Create(&module_def);
+    HPy m;
+    m = HPyModule_Create(ctx, &module_def);
+    if (HPy_IsNull(m))
+        return HPy_NULL;
 
-    if (setup_module(m) < 0) {
-        return NULL;
+    if (setup_module(ctx, m) < 0) {
+        return HPy_NULL;
     }
 
     return m;
