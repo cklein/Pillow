@@ -13,7 +13,7 @@
  * See the README file for information on usage and redistribution.
  */
 
-#include "Python.h"
+#include "hpy.h"
 
 #include "libImaging/Imaging.h"
 
@@ -162,15 +162,15 @@ BINOP(le_F, LE, FLOAT32)
 BINOP(gt_F, GT, FLOAT32)
 BINOP(ge_F, GE, FLOAT32)
 
-static PyObject *
-_unop(PyObject *self, PyObject *args) {
+HPyDef_METH(unop, "unop", unop_impl, HPyFunc_VARARGS)
+static HPy unop_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     Imaging out;
     Imaging im1;
     void (*unop)(Imaging, Imaging);
 
-    Py_ssize_t op, i0, i1;
-    if (!PyArg_ParseTuple(args, "nnn", &op, &i0, &i1)) {
-        return NULL;
+    HPy_ssize_t op, i0, i1;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "nnn", &op, &i0, &i1)) {
+        return HPy_NULL;
     }
 
     out = (Imaging)i0;
@@ -180,20 +180,19 @@ _unop(PyObject *self, PyObject *args) {
 
     unop(out, im1);
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
-static PyObject *
-_binop(PyObject *self, PyObject *args) {
+HPyDef_METH(binop, "binop", binop_impl, HPyFunc_VARARGS)
+static HPy binop_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
     Imaging out;
     Imaging im1;
     Imaging im2;
     void (*binop)(Imaging, Imaging, Imaging);
 
     Py_ssize_t op, i0, i1, i2;
-    if (!PyArg_ParseTuple(args, "nnnn", &op, &i0, &i1, &i2)) {
-        return NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "nnnn", &op, &i0, &i1, &i2)) {
+        return HPy_NULL;
     }
 
     out = (Imaging)i0;
@@ -204,91 +203,97 @@ _binop(PyObject *self, PyObject *args) {
 
     binop(out, im1, im2);
 
-    Py_INCREF(Py_None);
-    return Py_None;
+    return HPy_Dup(ctx, ctx->h_None);
 }
 
-static PyMethodDef _functions[] = {
-    {"unop", _unop, 1}, {"binop", _binop, 1}, {NULL, NULL}};
+static HPyDef *module_defines[] = {
+    &unop,
+    &binop,
+    NULL,
+};
 
 static void
-install(PyObject *d, char *name, void *value) {
-    PyObject *v = PyLong_FromSsize_t((Py_ssize_t)value);
-    if (!v || PyDict_SetItemString(d, name, v)) {
-        PyErr_Clear();
+install(HPyContext *ctx, HPy h_dict, char *name, void *value) {
+    HPy h_key = HPyUnicode_FromString(ctx, name);
+    HPy h_value = HPyLong_FromSsize_t(ctx, (HPy_ssize_t)value);
+
+    if (HPy_IsNull(h_key) || HPy_IsNull(h_value) || HPy_SetItem(ctx, h_dict, h_key, h_value)) {
+        HPyErr_Clear(ctx);
     }
-    Py_XDECREF(v);
 }
 
 static int
-setup_module(PyObject *m) {
-    PyObject *d = PyModule_GetDict(m);
+setup_module(HPyContext *ctx, HPy h_module) {
+    // TODO(hpy): This is a bit hacky
+    HPy h_dict = HPy_GetAttr(ctx, h_module, HPyUnicode_FromString(ctx, "__dict__"));
 
-    install(d, "abs_I", abs_I);
-    install(d, "neg_I", neg_I);
-    install(d, "add_I", add_I);
-    install(d, "sub_I", sub_I);
-    install(d, "diff_I", diff_I);
-    install(d, "mul_I", mul_I);
-    install(d, "div_I", div_I);
-    install(d, "mod_I", mod_I);
-    install(d, "min_I", min_I);
-    install(d, "max_I", max_I);
-    install(d, "pow_I", pow_I);
+    install(ctx, h_dict, "abs_I", abs_I);
+    install(ctx, h_dict, "neg_I", neg_I);
+    install(ctx, h_dict, "add_I", add_I);
+    install(ctx, h_dict, "sub_I", sub_I);
+    install(ctx, h_dict, "diff_I", diff_I);
+    install(ctx, h_dict, "mul_I", mul_I);
+    install(ctx, h_dict, "div_I", div_I);
+    install(ctx, h_dict, "mod_I", mod_I);
+    install(ctx, h_dict, "min_I", min_I);
+    install(ctx, h_dict, "max_I", max_I);
+    install(ctx, h_dict, "pow_I", pow_I);
 
-    install(d, "invert_I", invert_I);
-    install(d, "and_I", and_I);
-    install(d, "or_I", or_I);
-    install(d, "xor_I", xor_I);
-    install(d, "lshift_I", lshift_I);
-    install(d, "rshift_I", rshift_I);
+    install(ctx, h_dict, "invert_I", invert_I);
+    install(ctx, h_dict, "and_I", and_I);
+    install(ctx, h_dict, "or_I", or_I);
+    install(ctx, h_dict, "xor_I", xor_I);
+    install(ctx, h_dict, "lshift_I", lshift_I);
+    install(ctx, h_dict, "rshift_I", rshift_I);
 
-    install(d, "eq_I", eq_I);
-    install(d, "ne_I", ne_I);
-    install(d, "lt_I", lt_I);
-    install(d, "le_I", le_I);
-    install(d, "gt_I", gt_I);
-    install(d, "ge_I", ge_I);
+    install(ctx, h_dict, "eq_I", eq_I);
+    install(ctx, h_dict, "ne_I", ne_I);
+    install(ctx, h_dict, "lt_I", lt_I);
+    install(ctx, h_dict, "le_I", le_I);
+    install(ctx, h_dict, "gt_I", gt_I);
+    install(ctx, h_dict, "ge_I", ge_I);
 
-    install(d, "abs_F", abs_F);
-    install(d, "neg_F", neg_F);
-    install(d, "add_F", add_F);
-    install(d, "sub_F", sub_F);
-    install(d, "diff_F", diff_F);
-    install(d, "mul_F", mul_F);
-    install(d, "div_F", div_F);
-    install(d, "mod_F", mod_F);
-    install(d, "min_F", min_F);
-    install(d, "max_F", max_F);
-    install(d, "pow_F", pow_F);
+    install(ctx, h_dict, "abs_F", abs_F);
+    install(ctx, h_dict, "neg_F", neg_F);
+    install(ctx, h_dict, "add_F", add_F);
+    install(ctx, h_dict, "sub_F", sub_F);
+    install(ctx, h_dict, "diff_F", diff_F);
+    install(ctx, h_dict, "mul_F", mul_F);
+    install(ctx, h_dict, "div_F", div_F);
+    install(ctx, h_dict, "mod_F", mod_F);
+    install(ctx, h_dict, "min_F", min_F);
+    install(ctx, h_dict, "max_F", max_F);
+    install(ctx, h_dict, "pow_F", pow_F);
 
-    install(d, "eq_F", eq_F);
-    install(d, "ne_F", ne_F);
-    install(d, "lt_F", lt_F);
-    install(d, "le_F", le_F);
-    install(d, "gt_F", gt_F);
-    install(d, "ge_F", ge_F);
+    install(ctx, h_dict, "eq_F", eq_F);
+    install(ctx, h_dict, "ne_F", ne_F);
+    install(ctx, h_dict, "lt_F", lt_F);
+    install(ctx, h_dict, "le_F", le_F);
+    install(ctx, h_dict, "gt_F", gt_F);
+    install(ctx, h_dict, "ge_F", ge_F);
 
     return 0;
 }
 
-PyMODINIT_FUNC
-PyInit__imagingmath(void) {
-    PyObject *m;
 
-    static PyModuleDef module_def = {
-        PyModuleDef_HEAD_INIT,
-        "_imagingmath", /* m_name */
-        NULL,           /* m_doc */
-        -1,             /* m_size */
-        _functions,     /* m_methods */
+HPy_MODINIT(_imagingmath)
+static HPy init__imagingmath_impl(HPyContext *ctx) {
+
+    static HPyModuleDef module_def = {
+        HPyModuleDef_HEAD_INIT,
+        .m_name = "_imagingmath",
+        .m_doc = NULL,
+        .m_size = -1,
+        .defines = module_defines,
     };
 
-    m = PyModule_Create(&module_def);
+    HPy h_module = HPyModule_Create(ctx, &module_def);
+    if (HPy_IsNull(h_module))
+        return HPy_NULL;
 
-    if (setup_module(m) < 0) {
-        return NULL;
+    if (setup_module(ctx, h_module) < 0) {
+        return HPy_NULL;
     }
 
-    return m;
+    return h_module;
 }
