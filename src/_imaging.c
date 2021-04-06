@@ -185,17 +185,19 @@ PyImagingNew(Imaging imOut) {
     return (PyObject *)imagep;
 }
 
-static void
-_dealloc(ImagingObject *imagep) {
+
+HPyDef_SLOT(Imaging_destroy, Imaging_destroy_impl, HPy_tp_destroy)
+static void Imaging_destroy_impl(void *obj)
+{
 #ifdef VERBOSE
-    printf("imaging %p deleted\n", imagep);
+    printf("imaging %p deleted\n", obj);
 #endif
 
+    ImagingObject *imagep = (ImagingObject *)obj;
     if (imagep->access) {
         ImagingAccessDelete(imagep->image, imagep->access);
     }
     ImagingDelete(imagep->image);
-    PyObject_Del(imagep);
 }
 
 #define PyImaging_Check(op) (Py_TYPE(op) == Imaging_Type)
@@ -3620,7 +3622,6 @@ image_item(ImagingObject *self, Py_ssize_t i) {
 /* type description */
 
 static PyType_Slot Imaging_Type_slots[] = {
-    {Py_tp_dealloc, (destructor)_dealloc},
     {Py_sq_length, (lenfunc)image_length},
     {Py_sq_item, (ssizeargfunc)image_item},
     {Py_tp_methods, methods},
@@ -3629,6 +3630,8 @@ static PyType_Slot Imaging_Type_slots[] = {
 };
 
 static HPyDef *Imaging_type_defines[] = {
+    &Imaging_destroy,
+
     &Imaging_convert,
     &Imaging_copy,
     &Imaging_expand,
