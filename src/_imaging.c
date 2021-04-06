@@ -1081,39 +1081,49 @@ static HPy Imaging_gaussian_blur_impl(HPyContext *ctx, HPy self, HPy *args, HPy_
 }
 #endif
 
-static PyObject *
-_getpalette(ImagingObject *self, PyObject *args) {
-    PyObject *palette;
+HPyDef_METH(Imaging_getpalette, "getpalette", Imaging_getpalette_impl, HPyFunc_VARARGS)
+static HPy Imaging_getpalette_impl(HPyContext *ctx, HPy self, HPy *args, HPy_ssize_t nargs) {
+    HPy h_mode = HPy_NULL, h_rawmode = HPy_NULL;
+    if (!HPyArg_Parse(ctx, NULL, args, nargs, "|OO", &h_mode, &h_rawmode)) {
+        return HPy_NULL;
+    }
+
+    const char *mode, *rawmode;
+    if(HPy_IsNull(h_mode)) {
+        mode = "RGB";
+    } else {
+        mode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_mode));
+    }
+
+    if(HPy_IsNull(h_rawmode)) {
+        rawmode = "RGB";
+    } else {
+        rawmode = PyUnicode_AsUTF8(HPy_AsPyObject(ctx, h_rawmode));
+    }
+
+    ImagingObject *im = (ImagingObject *)HPy_AsPyObject(ctx, self);
+
+    if (!im->image->palette) {
+        HPyErr_SetString(ctx, ctx->h_ValueError, no_palette);
+        return HPy_NULL;
+    }
+
     int palettesize = 256;
     int bits;
-    ImagingShuffler pack;
-
-    char *mode = "RGB";
-    char *rawmode = "RGB";
-    if (!PyArg_ParseTuple(args, "|ss", &mode, &rawmode)) {
-        return NULL;
-    }
-
-    if (!self->image->palette) {
-        PyErr_SetString(PyExc_ValueError, no_palette);
-        return NULL;
-    }
-
-    pack = ImagingFindPacker(mode, rawmode, &bits);
+    ImagingShuffler pack = ImagingFindPacker(mode, rawmode, &bits);
     if (!pack) {
-        PyErr_SetString(PyExc_ValueError, wrong_raw_mode);
-        return NULL;
+        HPyErr_SetString(ctx, ctx->h_ValueError, wrong_raw_mode);
+        return HPy_NULL;
     }
 
-    palette = PyBytes_FromStringAndSize(NULL, palettesize * bits / 8);
+    PyObject *palette = PyBytes_FromStringAndSize(NULL, palettesize * bits / 8);
     if (!palette) {
-        return NULL;
+        return HPy_NULL;
     }
 
-    pack(
-        (UINT8 *)PyBytes_AsString(palette), self->image->palette->palette, palettesize);
+    pack((UINT8 *)PyBytes_AsString(palette), im->image->palette->palette, palettesize);
 
-    return palette;
+    return HPy_FromPyObject(ctx, palette);
 }
 
 HPyDef_METH(Imaging_getpalettemode, "getpalettemode", Imaging_getpalettemode_impl, HPyFunc_NOARGS)
@@ -3497,7 +3507,6 @@ static struct PyMethodDef methods[] = {
 
     {"setmode", (PyCFunction)im_setmode, 1},
 
-    {"getpalette", (PyCFunction)_getpalette, 1},
     {"putpalette", (PyCFunction)_putpalette, 1},
     {"putpalettealpha", (PyCFunction)_putpalettealpha, 1},
     {"putpalettealphas", (PyCFunction)_putpalettealphas, 1},
@@ -3623,10 +3632,11 @@ static PyType_Slot Imaging_Type_slots[] = {
 };
 
 static HPyDef *Imaging_type_defines[] = {
-    &Imaging_getpalettemode,
     &Imaging_convert,
     &Imaging_copy,
     &Imaging_expand,
+    &Imaging_getpalette,
+    &Imaging_getpalettemode,
     &Imaging_offset,
     &Imaging_transpose,
 
